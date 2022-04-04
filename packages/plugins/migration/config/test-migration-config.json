@@ -1,46 +1,62 @@
-{
-    "modules": [
-        {
-            "name": "Vesting",
-            "item": {
-                "name": "Vesting"
-            }
+[
+    {
+        "source": {
+            "pallet": "Claims",
+            "item": "Total"
         },
-        {
-            "name": "Proxy",
-            "item": {
-                "name": "Proxies"
-            }
-        },
-        {
-            "name": "Balances",
-            "item": {
-                "name": "TotalIssuance"
-            }
-        },
-        {
-            "name": "System",
-            "item": {
-                "name": "Account"
-            }
+        "destination": {
+            "pallet": "Claims",
+            "item": "Total"
         }
-    ],
-    "sequence": [
-        {
-            "name": "Balances",
-            "item": "TotalIssuance"
+    },
+    {
+        "source": {
+            "pallet": "Claims",
+            "item": "Claims"
         },
-        {
-            "name": "System",
-            "item": "Account"
-        },
-        {
-            "name": "Proxy",
+        "destination": {
+            "pallet": "Claims",
+            "item": "Claims"
+        }
+    },
+    {
+        "source": {
+            "pallet": "Proxy",
             "item": "Proxies"
         },
-        {
-            "name": "Vesting",
+        "destination": {
+            "pallet": "Proxy",
+            "item": "Proxies"
+        }
+    },
+    {
+        "source": {
+            "pallet": "Balances",
+            "item": "TotalIssuance"
+        },
+        "destination": {
+            "pallet": "Balances",
+            "item": "TotalIssuance"
+        }
+    },
+    {
+        "source": {
+            "pallet": "Vesting",
+            "item": "Vesting"
+        },
+        "destination": {
+            "pallet": "Vesting",
             "item": "Vesting"
         }
-    ]
-}
+    },
+    {
+        "source": {
+            "pallet": "System",
+            "item": "Account"
+        },
+        "destination": {
+            "pallet": "System",
+            "item": "Account"
+        }
+    }
+]

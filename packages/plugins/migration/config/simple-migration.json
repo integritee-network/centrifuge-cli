@@ -1,16 +1,22 @@
-{
-    "modules": [
-        {
-            "name": "Vesting",
-            "item": {
-                "name": "Vesting"
-            }
+[
+    {
+        "source": {
+            "pallet": "Claims",
+            "item": "Claims"
+        },
+        "destination": {
+            "pallet": "Claims",
+            "item": "Claims"
         }
-    ],
-    "sequence": [
-        {
-            "name": "Vesting",
-            "item": "Vesting"
+    },
+    {
+        "source": {
+            "pallet": "Claims",
+            "item": "Total"
+        },
+        "destination": {
+            "pallet": "Claims",
+            "item": "Total"
         }
-    ]
-}
+    }
+]
