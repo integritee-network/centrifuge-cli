@@ -11,6 +11,7 @@ import {cryptoWaitReady} from "@polkadot/util-crypto"
 import {getContributions as getContributionsKusama} from "../crowdloan/kusama";
 import {getContributions as getContributionsPolkadot} from "../crowdloan/polkadot";
 import { parse } from 'csv-parse';
+import '@polkadot/api-augment'
 
 const JSONbig = require('json-bigint')({ useNativeBigInt: true, alwaysParseAsBig: true });
 
@@ -31,7 +32,7 @@ import {
     Credentials,
     Proof,
     Signature, Contribution,
-    Balance, AccountId, Additionals
+    Balance, AccountId, Additionals, Removals
 } from "../crowdloan/interfaces";
 import {RegistryTypes} from "@polkadot/types/types";
 
@@ -94,6 +95,10 @@ export default class Crowdloan extends CliBaseCommand {
             description: 'Allows to append data that should go into a merkle-tree, that are not coming from contributions.',
             exclusive: ['simulate']
         }),
+        'remove-tree': flags.string({
+            description: 'Allows to remove data from the merkle-tree.',
+            exclusive: ['simulate']
+        }),
         'simulate':  flags.boolean({
             description: 'if present, the data from the contributions will be simulated and not fetched from a relay chain',
         }),
@@ -139,6 +144,10 @@ export default class Crowdloan extends CliBaseCommand {
 
                 if(flags['append-tree'] !== undefined) {
                     await this.appendContributions(contributions, flags["append-tree"]);
+                }
+
+                if(flags['remove-tree'] !== undefined) {
+                    await this.removeContributions(contributions, flags["remove-tree"]);
                 }
 
                 if (flags.simulate) {
@@ -1045,7 +1054,7 @@ export default class Crowdloan extends CliBaseCommand {
 
             additionals.forEach((contributor) => {
                 check(contributor);
-                this.logger.info("Contributor Extra:" + JSONbig.stringify(contributor))
+                this.logger.debug("Contributor Extra:" + JSONbig.stringify(contributor))
                 let hexAddress;
                 try {
                      hexAddress = `0x${hexEncode(decodeAddress(contributor.address))}`;
@@ -1059,17 +1068,78 @@ export default class Crowdloan extends CliBaseCommand {
 
                     if (oldAmount !== undefined) {
                         contributions.set(hexAddress, oldAmount + contributor.amount);
-                        this.logger.info("Adapting contribution from " + hexAddress + " to: " + BigInt(oldAmount + contributor.amount));
+                        this.logger.debug("Adapting contribution from " + hexAddress + " to: " + BigInt(oldAmount + contributor.amount));
                     } else {
                         this.logger.warn("Could not fetch contribution amount from existing account " + hexAddress);
                     }
                 } else {
                     contributions.set(hexAddress, contributor.amount);
-                    this.logger.info("Setting contribution from " + hexAddress +" manually to: " + contributor.amount);
+                    this.logger.debug("Setting contribution from " + hexAddress +" manually to: " + contributor.amount);
                 }
             })
         } catch (err) {
             return Promise.reject("Failed in appending contributors: \n" + err);
+        }
+    }
+
+    private async removeContributions(contributions: Map<AccountId, Balance>, filePath: string) {
+        try {
+            let removals: Array<Removals> = [];
+            const file = fs.readFileSync(filePath).toString()
+            const csv = file.split(/\r?\n/);
+            this.logger.debug(csv);
+
+            const check = (value: Removals) => {
+                if(value.name === undefined) {
+                    throw new Error("Invalid removal contributions parsed. Value is: " + value);
+                }
+                if(value.address === undefined) {
+                    throw new Error("Invalid removal contributions parsed. Value is: " + value);
+                }
+            }
+
+            for (const column of csv) {
+                let rows = column.split(',');
+                this.logger.debug(rows);
+
+                let contributor: Removals = {
+                    name: rows[0].trim(),
+                    address: rows[1].trim(),
+                };
+
+                check(contributor);
+                removals.push(contributor)
+            }
+
+
+            removals.forEach((contributor) => {
+                this.logger.info("Contributor Removal:" + JSONbig.stringify(contributor))
+                let hexAddress;
+                try {
+                    hexAddress = `0x${hexEncode(decodeAddress(contributor.address))}`;
+                } catch (err) {
+                    this.logger.error(`Could not decode address. Contribution of ${contributor.name}  not removed. \n ${err}`);
+                    return;
+                }
+
+                if (contributions.has(hexAddress)) {
+                    const oldAmount = contributions.get(hexAddress);
+
+                    if (oldAmount !== undefined) {
+                        if (!contributions.delete(hexAddress)) {
+                            this.logger.warn("Could not remove contribution from " + hexAddress + " with amount of " + oldAmount + " from merkle-tree.");
+                        } else {
+                            this.logger.info("Removing contribution from " + hexAddress + " with amount of " + oldAmount + " from merkle-tree.");
+                        }
+                    } else {
+                        this.logger.warn("Could not fetch contribution amount from existing account " + hexAddress);
+                    }
+                } else {
+                    this.logger.warn("Removing contribution from " + hexAddress + " failed. Not in merkle-tree.");
+                }
+            })
+        } catch (err) {
+            return Promise.reject("Failed to remove contributors: \n" + err);
         }
     }
 }

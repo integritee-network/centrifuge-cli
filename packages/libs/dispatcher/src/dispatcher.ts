@@ -3,6 +3,7 @@ import {xxhashAsHex} from "@polkadot/util-crypto";
 import {ApiPromise, Keyring, SubmittableResult, WsProvider} from "@polkadot/api";
 import {KeyringPair} from "@polkadot/keyring/types";
 import {Hash} from "@polkadot/types/interfaces";
+import '@polkadot/api-augment'
 
 export class Dispatcher {
     readonly maxConcurrent: number;
