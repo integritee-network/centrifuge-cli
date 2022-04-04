@@ -38,7 +38,7 @@ export async function transform(
             let palletItems = getOrInsertMap(state, palletKey);
             await transformProxy(fromApi, toApi, palletItems, keyValues);
 
-        } else if (key.startsWith(xxhashAsHex("RadClaims", 128))) {
+        } else if (key.startsWith(xxhashAsHex("Claims", 128))) {
             let palletKey = xxhashAsHex("Claims", 128);
             let palletItems = getOrInsertMap(state, palletKey);
             await transformClaims(fromApi, toApi, palletItems, keyValues);
@@ -53,33 +53,29 @@ export async function transform(
 
 async function transformClaims(fromApi: ApiPromise, toApi: ApiPromise, state: Map<string, Array<StorageItem>>, keyValues: Array<[StorageKey, Uint8Array]>) {
     for (let [patriciaKey, value] of keyValues) {
-        if (patriciaKey.toHex().startsWith(xxhashAsHex("RadClaims", 128) + xxhashAsHex("AccountBalances", 128).slice(2))) {
-            let pkStorageItem = xxhashAsHex("Claims", 128) + xxhashAsHex("ClaimedAmounts", 128).slice(2);
-            await insertOrNewArray(state, pkStorageItem, await transformClaimsClaimedAmounts(fromApi, toApi, patriciaKey, value));
-        } else if (patriciaKey.toHex().startsWith(xxhashAsHex("RadClaims", 128) + xxhashAsHex("UploadAccount", 128).slice(2))) {
-            let pkStorageItem = xxhashAsHex("Claims", 128) + xxhashAsHex("UploadAccount", 128).slice(2);
-            await insertOrNewArray(state, pkStorageItem, await transformClaimsUploadAccount(fromApi, toApi, patriciaKey, value));
-
+        if (patriciaKey.toHex().startsWith(xxhashAsHex("Claims", 128) + xxhashAsHex("Total", 128).slice(2))) {
+            let pkStorageItem = xxhashAsHex("Claims", 128) + xxhashAsHex("Total", 128).slice(2);
+            await insertOrNewArray(state, pkStorageItem, await transformClaimsTotal(fromApi, toApi, patriciaKey, value));
+        } else if (patriciaKey.toHex().startsWith(xxhashAsHex("Claims", 128) + xxhashAsHex("Claims", 128).slice(2))) {
+            let pkStorageItem = xxhashAsHex("Claims", 128) + xxhashAsHex("Claims", 128).slice(2);
+            await insertOrNewArray(state, pkStorageItem, await transformClaimsClaim(fromApi, toApi, patriciaKey, value));
         } else {
             return Promise.reject("Fetched data that can not be transformed. PatriciaKey is: " + patriciaKey.toHuman());
         }
     }
 }
 
-async function transformClaimsClaimedAmounts(fromApi: ApiPromise, toApi: ApiPromise, completeKey: StorageKey, scaleClaimedAmountsUser: Uint8Array): Promise<StorageItem> {
-    // We need to update the pallet and the item hash prefixes of the key here
-    let newPrefix = xxhashAsHex("Claims", 128) + xxhashAsHex("ClaimedAmounts", 128).slice(2);
-    // First 64 characters plus 0x from hex representation
-    let keyWithoutPrefix = completeKey.toHex().slice(66);
-    let newKey = toApi.createType("StorageKey", newPrefix + keyWithoutPrefix);
-    return new StorageMapValue(scaleClaimedAmountsUser, newKey);
+async function transformClaimsTotal(fromApi: ApiPromise, toApi: ApiPromise, completeKey: StorageKey, scaleClaimsTotal: Uint8Array): Promise<StorageItem> {
+    // We don't need to update the patricia key here as we will generate the correct one in the migration during
+    // creation of the set_storage extrinsic
+    return new StorageValueValue(scaleClaimsTotal);
 
 }
 
-async function transformClaimsUploadAccount(fromApi: ApiPromise, toApi: ApiPromise, completeKey: StorageKey, scaleUploadAccount: Uint8Array): Promise<StorageItem> {
+async function transformClaimsClaim(fromApi: ApiPromise, toApi: ApiPromise, completeKey: StorageKey, scaleClaimsClaims: Uint8Array): Promise<StorageItem> {
     // We don't need to update the patricia key here as we will generate the correct one in the migration during
     // creation of the set_storage extrinsic
-    return new StorageValueValue(scaleUploadAccount);
+    return new StorageMapValue(scaleClaimsClaims, completeKey);
 }
 
 async function transformProxy(

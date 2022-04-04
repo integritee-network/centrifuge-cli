@@ -55,13 +55,13 @@ export async function verifyMigration(
             if (failed.length > 0) {
                 failedVerification.push(...failed);
             }
-        } else if (destKey === xxhashAsHex("Claims", 128) + xxhashAsHex("ClaimedAmounts", 128).slice(2)) {
-            let failed = await verifyClaimsClaimedAmounts(sourceData, source.api, destData, destination.api);
+        } else if (destKey === xxhashAsHex("Claims", 128) + xxhashAsHex("Claims", 128).slice(2)) {
+            let failed = await verifyClaimsClaims(sourceData, source.api, destData, destination.api);
             if (failed.length !== 0) {
                 failedVerification.push(...failed);
             }
-        } else if (destKey === xxhashAsHex("Claims", 128) + xxhashAsHex("UploadAccount", 128).slice(2)) {
-            let failed = await verifyClaimsUploadAccount(sourceData, source.api, destData, destination.api);
+        } else if (destKey === xxhashAsHex("Claims", 128) + xxhashAsHex("Total", 128).slice(2)) {
+            let failed = await verifyClaimsTotal(sourceData, source.api, destData, destination.api);
             if (failed.length !== 0) {
                 failedVerification.push(...failed);
             }
@@ -74,7 +74,7 @@ export async function verifyMigration(
     return failedVerification;
 }
 
-async function verifyClaimsClaimedAmounts(
+async function verifyClaimsClaims(
     sourceData: Array<[StorageKey, Uint8Array]>,
     sourceApi: ApiPromise,
     destData: Array<[StorageKey, Uint8Array]>,
@@ -82,32 +82,32 @@ async function verifyClaimsClaimedAmounts(
 ): Promise<Array<[StorageKey, Uint8Array]>> {
     let failed = new Array();
     let newDataMap = destData.reduce(function (map, [key, data]) {
-        let accountId = destApi.createType("AccountId", key.toU8a(true).slice(-32));
-        map.set(accountId.toHex(), data);
+        let ethereumAccount = destApi.createType("ClaimsPrimitivesEthereumAddress", key.toU8a(true).slice(-32));
+        map.set(ethereumAccount.toHex(), data);
         return map;
     }, new Map<string, Uint8Array>());
     let checked = 0;
 
-    for (let [sourceKey, sourceClaimedAmount] of sourceData) {
+    for (let [sourceKey, sourceClaims] of sourceData) {
         process.stdout.write("    Verifying:    " + checked + "/ \r");
-        let account = destApi.createType("AccountId", sourceKey.toU8a(true).slice(-32)).toHex();
-        let destClaimedAmount = newDataMap.get(account);
+        let account = destApi.createType("ClaimsPrimitivesEthereumAddress", sourceKey.toU8a(true).slice(-32)).toHex();
+        let destClaims = newDataMap.get(account);
 
-        if (destClaimedAmount !== undefined) {
-            let sourceClaimedBalance = sourceApi.createType('Balance', sourceClaimedAmount);
-            let destClaimedBalance = destApi.createType('Balance', destClaimedAmount);
+        if (destClaims !== undefined) {
+            let sourceClaimedBalance = sourceApi.createType('Balance', sourceClaims);
+            let destClaimedBalance = destApi.createType('Balance', destClaims);
 
             if (destClaimedBalance.toBigInt() !== sourceClaimedBalance.toBigInt()) {
-                console.log(
-                    "ERROR Claims.ClaimedAmounts: Mismatch for account" + account + "\n",
+                console.error(
+                    "ERROR Claims.Claims: Mismatch for account" + account + "\n",
                     "Amount in source: " + sourceClaimedBalance.toBigInt() + "\n",
                     "Amount in destination: " + destClaimedBalance.toBigInt()
                 )
-                failed.push([sourceKey, sourceClaimedAmount]);
+                failed.push([sourceKey, sourceClaims]);
             }
         } else {
-            console.log("ERROR Claims.ClaimedAmounts: New claimed amount for account " + sourceKey.toHex() + " not found in the destination chain...");
-            failed.push([sourceKey, sourceClaimedAmount]);
+            console.error("ERROR Claims.ClaimedAmounts: New claimed amount for account " + sourceKey.toHex() + " not found in the destination chain...");
+            failed.push([sourceKey, sourceClaims]);
         }
 
         checked += 1;
@@ -116,26 +116,25 @@ async function verifyClaimsClaimedAmounts(
     return failed;
 }
 
-async function verifyClaimsUploadAccount(
+async function verifyClaimsTotal(
     sourceData: Array<[StorageKey, Uint8Array]>,
     sourceApi: ApiPromise,
     destData: Array<[StorageKey, Uint8Array]>,
     destApi: ApiPromise
 ): Promise<Array<[StorageKey, Uint8Array]>> {
-    // UploadAccount is a StorageValue, so we only need to handle the first and only element.
-    let [sourceKey, sourceAccountRaw] = sourceData[0];
-    let [_, destAccountRaw] = destData[0];
+    // Total is a StorageValue, so we only need to handle the first and only element.
+    let [sourceKey, sourceTotalRaw] = sourceData[0];
+    let [_, destTotalRaw] = destData[0];
 
-    let sourceAccount = sourceApi.createType('AccountId', sourceAccountRaw).toHex();
-    let destAccount = destApi.createType('AccountId', destAccountRaw).toHex();
-
-    if (sourceAccount !== destAccount) {
+    let sourceTotal = sourceApi.createType('u128', sourceTotalRaw).toHex();
+    let destTotal = destApi.createType('u128', destTotalRaw).toHex();
+    if (sourceTotal !== destTotal) {
         console.error(
-            "ERROR Claims.UploadAccount: Mismatch \n",
-            "Source: " + sourceAccount + " \n",
-            "Destination: " + destAccount
+            "ERROR Claims.Total: Mismatch \n",
+            "Source: " + sourceTotal + " \n",
+            "Destination: " + destTotal
         );
-        return [[sourceKey, sourceAccountRaw]];
+        return [[sourceKey, sourceTotalRaw]];
     }
 
     return [];
@@ -459,10 +458,10 @@ async function prepareClaims(
 ) {
     // Match against the actual storage items of a pallet.
     for (let [palletStorageItemKey, values] of Array.from(keyValues)) {
-        if (palletStorageItemKey === (xxhashAsHex("Claims", 128) + xxhashAsHex("ClaimedAmounts", 128).slice(2))) {
-            xts.set(palletStorageItemKey, await prepareClaimsClaimedAmounts(toApi, values));
-        } else if (palletStorageItemKey === (xxhashAsHex("Claims", 128) + xxhashAsHex("UploadAccount", 128).slice(2))) {
-            xts.set(palletStorageItemKey, await prepareClaimsUploadAccount(toApi, values));
+        if (palletStorageItemKey === (xxhashAsHex("Claims", 128) + xxhashAsHex("Total", 128).slice(2))) {
+            xts.set(palletStorageItemKey, await prepareClaimsTotal(toApi, values));
+        } else if (palletStorageItemKey === (xxhashAsHex("Claims", 128) + xxhashAsHex("Claims", 128).slice(2))) {
+            xts.set(palletStorageItemKey, await prepareClaimsClaims(toApi, values));
 
         } else {
             return Promise.reject("Fetched data that can not be migrated. PatriciaKey is: " + palletStorageItemKey);
@@ -470,7 +469,34 @@ async function prepareClaims(
     }
 }
 
-async function prepareClaimsClaimedAmounts(
+async function prepareClaimsTotal(
+    toApi: ApiPromise,
+    values: StorageItem[]
+): Promise<Array<SubmittableExtrinsic<ApiTypes, SubmittableResult>>> {
+    let xts: Array<SubmittableExtrinsic<ApiTypes, SubmittableResult>> = new Array();
+
+    let counter = 0;
+    for (const item of values) {
+        if (counter > 0) {
+            return Promise.reject("Expected Claims.Total to be a single storage value. Got multiple.");
+        }
+
+        counter += 1;
+        if (item instanceof StorageValueValue) {
+            let key = Array.from(toApi.createType("StorageKey", xxhashAsHex("Claims", 128) + xxhashAsHex("Total", 128).slice(2)).toU8a(true));
+            let value = Array.from(item.value);
+            let keyValue = toApi.createType("Vec<(Vec<u8>, Vec<u8>)>", [[key, value]])
+            xts.push(toApi.tx.system.setStorage(keyValue));
+        } else {
+            return Promise.reject("Expected Claims.Total storage values to be of type StorageValueValue. Got: " + JSON.stringify(item));
+        }
+    }
+
+    return xts;
+}
+
+
+async function prepareClaimsClaims(
     toApi: ApiPromise,
     values: StorageItem[]
 ): Promise<Array<SubmittableExtrinsic<ApiTypes, SubmittableResult>>> {
@@ -498,33 +524,7 @@ async function prepareClaimsClaimedAmounts(
                 packetOfKeyValues.push(keyValue);
             }
         } else {
-            return Promise.reject("Expected Claims.ClaimedAmounts storage values to be of type StorageMapValue. Got: " + JSON.stringify(item));
-        }
-    }
-
-    return xts;
-}
-
-async function prepareClaimsUploadAccount(
-    toApi: ApiPromise,
-    values: StorageItem[]
-): Promise<Array<SubmittableExtrinsic<ApiTypes, SubmittableResult>>> {
-    let xts: Array<SubmittableExtrinsic<ApiTypes, SubmittableResult>> = new Array();
-
-    let counter = 0;
-    for (const item of values) {
-        if (counter > 0) {
-            return Promise.reject("Expected Claims.UpdloadAccount to be a single storage value. Got multiple.");
-        }
-
-        counter += 1;
-        if (item instanceof StorageValueValue) {
-            let key = Array.from(toApi.createType("StorageKey", xxhashAsHex("Claims", 128) + xxhashAsHex("UploadAccount", 128).slice(2)).toU8a(true));
-            let value = Array.from(item.value);
-            let keyValue = toApi.createType("Vec<(Vec<u8>, Vec<u8>)>", [[key, value]])
-            xts.push(toApi.tx.system.setStorage(keyValue));
-        } else {
-            return Promise.reject("Expected Claims.UpdloadAccount storage values to be of type StorageValueValue. Got: " + JSON.stringify(item));
+            return Promise.reject("Expected Claims.Claims storage values to be of type StorageMapValue. Got: " + JSON.stringify(item));
         }
     }
 

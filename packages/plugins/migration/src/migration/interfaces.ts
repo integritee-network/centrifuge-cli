@@ -1,4 +1,4 @@
-import {PalletElement, StorageElement, StorageItemElement} from "./common";
+import { PalletElement, StorageElement, StorageItemElement } from "./common";
 
 export interface Credentials {
     rawSeed: string
@@ -8,7 +8,7 @@ export interface Credentials {
 export type Migrations = Array<Migration>;
 
 // A migration, i.e, a type capturing the migratable item in the source and in the destination chain.
-// For example, { source: (RadClaims, AccountBalances), destination: (Claims, ClaimedAmounts) }.
+// For example, { source: (Claims, AccountBalances), destination: (Claims, ClaimedAmounts) }.
 export interface Migration {
     // The source storage item
     source: StorageItem,
