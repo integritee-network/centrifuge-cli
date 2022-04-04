@@ -1,4 +1,3 @@
-import '@polkadot/api-augment/substrate';
 import { ApiPromise } from "@polkadot/api";
 import { StorageKey } from "@polkadot/types";
 import { xxhashAsHex, blake2AsHex } from "@polkadot/util-crypto";
