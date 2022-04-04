@@ -140,10 +140,13 @@ export default class Migration extends CliBaseCommand {
 
             if (flags['just-verify'] === undefined) {
                 // A copy of the source storage state we are interested in
+                console.info("Fetching data from solochain..");
                 const sourceState = await fork(this.fromApi, storageToFetch, atFrom);
                 // Transform the source state to match the appropriate schema in the destination
+                console.info("Tranforming data..");
                 const transformedState: Map<string, Map<string, Array<StorageItem>>>
                     = await transform(sourceState, this.fromApi, this.toApi, startFrom, atFrom, atTo);
+                console.info("Generating extrinsics..");
                 const extrinsics = await buildExtrinsics(transformedState, this.fromApi, this.toApi);
 
                 // Execute migration
