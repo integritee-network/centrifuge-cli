@@ -252,7 +252,7 @@ export default class Migration extends CliBaseCommand {
                 if (inconsistentStorage.length === 0) {
                     this.logger.info("✅️ Migration has been verified successfully");
                 } else {
-                    this.logger.info("❌ Migration failed for the following " + inconsistentStorage.length + "storage elements (source storage values):");
+                    this.logger.info("❌ Migration failed for the following " + inconsistentStorage.length + " storage elements (source storage values):");
                     let errMsg = inconsistentStorage.reduce((errMsg, [key, value]) => {
                         errMsg += "  Key: " + key + ", value: " + value + "\n";
                         return errMsg;

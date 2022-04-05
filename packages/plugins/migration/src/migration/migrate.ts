@@ -329,45 +329,54 @@ async function verifyVestingVesting(
     for (let [key, value] of oldData) {
         process.stdout.write("    Verifying:    " + checked + "/ \r");
 
-        let oldVestingInfo = oldApi.createType('VestingInfo', value);
+        let oldVestingInfos = oldApi.createType('Vec<VestingInfo>', value);
 
-        const blockPeriodOldVesting = (oldVestingInfo.locked.toBigInt() / oldVestingInfo.perBlock.toBigInt());
-        const blocksPassedSinceVestingStart = (atFrom - oldVestingInfo.startingBlock.toBigInt());
-        const remainingBlocksVestingOld = blockPeriodOldVesting - blocksPassedSinceVestingStart;
-
-        if (remainingBlocksVestingOld <= 0) {
-            // Vesting has passed, the chain will resolve this directly upon our inserts.
-        } else {
-            let newScale = newDataMap.get(key.toHex());
-            if (newScale !== undefined) {
-                // The new data type is a Vec of VestingInfo instead of just VestingInfo so
-                // we need to unwrap the first entry, which must be present.
-                let newVestingInfo = newApi.createType('Vec<VestingInfo>', newScale)[0];
-
-                const blockPeriodNewVesting = newVestingInfo.locked.toBigInt() / newVestingInfo.perBlock.toBigInt();
-                const blocksPassedSinceVestingStartNew = (atTo - newVestingInfo.startingBlock.toBigInt());
-                const remainingBlocksVestingNew = blockPeriodNewVesting - blocksPassedSinceVestingStartNew;
-                const nullOrOne = remainingBlocksVestingOld - remainingBlocksVestingNew;
-
-                // Due to the arithmetics we accept if a vesting is off by 2 blocks in each direction.
-                if (!(BigInt(-2) <= nullOrOne && nullOrOne <= BigInt(2))) {
-                    let newAccount = newApi.createType("AccountId", key.toU8a(true).slice(-32));
-                    let oldAccount = oldApi.createType("AccountId", key.toU8a(true).slice(-32));
-                    console.log("ERROR: Remaining blocks for vesting are not equal...\n   Old: " + remainingBlocksVestingOld + " vs. New: " + remainingBlocksVestingNew + "\n    for account new " + newAccount.toHuman() + " account old " + oldAccount.toHuman());
-                    failed.push([key, value]);
-                }
-
-            } else {
+        let newScale = newDataMap.get(key.toHex());
+        if (newScale == undefined) {
+            let newAccount = newApi.createType("AccountId", key.toU8a(true).slice(-32));
+            let oldAccount = oldApi.createType("AccountId", key.toU8a(true).slice(-32));
+            console.log("ERROR: Could not find associated VestingInfo on new chain for account new " + newAccount.toHuman() + " account old " + oldAccount.toHuman());
+            failed.push([key, value]);
+        }
+        else {
+            let newVestingInfos = newApi.createType('Vec<VestingInfo>', newScale)
+            if (newVestingInfos.length !== oldVestingInfos.length) {
                 let newAccount = newApi.createType("AccountId", key.toU8a(true).slice(-32));
                 let oldAccount = oldApi.createType("AccountId", key.toU8a(true).slice(-32));
-                console.log("ERROR: Could not find associated VestingInfo on new chain for account new " + newAccount.toHuman() + " account old " + oldAccount.toHuman());
+                console.log("ERROR: Number of VestingInfos on new chain does not match old ones, Account: " + newAccount.toHuman() + " with " + newVestingInfos.length + " VestingInfos vs account old " + oldAccount.toHuman() + " with " + oldVestingInfos.length + " VestingInfos");
                 failed.push([key, value]);
+            } else {
+                let i = 0;
+                for (let oldVestingInfo of oldVestingInfos) {
+                    const blockPeriodOldVesting = (oldVestingInfo.locked.toBigInt() / oldVestingInfo.perBlock.toBigInt());
+                    const blocksPassedSinceVestingStart = (atFrom - oldVestingInfo.startingBlock.toBigInt());
+                    const remainingBlocksVestingOld = blockPeriodOldVesting - blocksPassedSinceVestingStart;
+                    if (remainingBlocksVestingOld <= 0) {
+                        // Vesting has passed, the chain will resolve this directly upon our inserts.
+                    } else {
+                        // The new data type is a Vec of VestingInfo instead of just VestingInfo so
+                        // we need to unwrap the first entry, which must be present.
+                        let newVestingInfo = newApi.createType('Vec<VestingInfo>', newScale)[i];
+
+                        const blockPeriodNewVesting = newVestingInfo.locked.toBigInt() / newVestingInfo.perBlock.toBigInt();
+                        const blocksPassedSinceVestingStartNew = (atTo - newVestingInfo.startingBlock.toBigInt());
+                        const remainingBlocksVestingNew = blockPeriodNewVesting - blocksPassedSinceVestingStartNew;
+                        const nullOrOne = remainingBlocksVestingOld - remainingBlocksVestingNew;
+
+                        // Due to the arithmetics we accept if a vesting is off by 2 blocks in each direction.
+                        if (!(BigInt(-2) <= nullOrOne && nullOrOne <= BigInt(2))) {
+                            let newAccount = newApi.createType("AccountId", key.toU8a(true).slice(-32));
+                            let oldAccount = oldApi.createType("AccountId", key.toU8a(true).slice(-32));
+                            console.log("ERROR: Remaining blocks for vesting are not equal...\n   Old: " + remainingBlocksVestingOld + " vs. New: " + remainingBlocksVestingNew + "\n    for account new " + newAccount.toHuman() + " account old " + oldAccount.toHuman());
+                            failed.push([key, value]);
+                        }
+                    }
+                    i += 1;
+                }
             }
+            checked += 1;
         }
-
-        checked += 1;
     }
-
     return failed;
 }
 
