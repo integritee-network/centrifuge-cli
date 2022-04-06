@@ -251,7 +251,7 @@ async function verifyProxyProxies(
         process.stdout.write("    Verifying:    " + checked + "/ \r");
 
         // @ts-ignore
-        let oldProxyInfo = oldApi.createType('(Vec<(AccountId, ProxyType)>, Balance)', value);
+        let oldProxyInfo = oldApi.createType('(Vec<(AccountId, ProxyType, BlockNumber)>, Balance)', value);
 
         let newScale = newDataMap.get(key.toHex());
         if (newScale !== undefined) {
@@ -585,7 +585,7 @@ async function prepareProxyProxies(
 
     let counter = 0;
     for (const item of values) {
-        // We know from the transformation that optional is set here.
+        // We know from the transformation that optional is set here: [reserved, delegateReserved].
         // In this case it defines the actual amount that shall be reserved on the delegator
         counter += 1;
         if (item instanceof StorageMapValue) {

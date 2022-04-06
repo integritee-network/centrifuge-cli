@@ -98,9 +98,11 @@ async function transformProxy(
 
 async function transformProxyProxies(fromApi: ApiPromise, toApi: ApiPromise, completeKey: StorageKey, scaleOldProxies: Uint8Array): Promise<StorageItem> {
     // @ts-ignore, see https://github.com/polkadot-js/api/issues/3746
-    let oldProxyInfo = fromApi.createType('(Vec<(AccountId, ProxyType)>, Balance)', scaleOldProxies);
+    let oldProxyInfo = fromApi.createType('(Vec<(AccountId, ProxyType, BlockNumber)>, Balance)', scaleOldProxies);
+    console.log("oldProxyInfo " + oldProxyInfo);
 
     let proxies: Array<ProxyDefinition> = new Array();
+
 
     // For the checks if anonymous proxies, we check if CINC is part of the proxies. Which indicates, that
     // that it is indeed an anonymous proxy. As CINC itself is a multisig...
@@ -149,22 +151,31 @@ async function transformProxyProxies(fromApi: ApiPromise, toApi: ApiPromise, com
     const { nonce, data: balance } = await fromApi.query.system.account(proxiedAccount);
     const base = await fromApi.consts.proxy.proxyDepositBase;
     const perProxy = await fromApi.consts.proxy.proxyDepositFactor;
-
+    // Balance to be reserved on the deleator account
     let reserve: Balance;
-    // In the case that we see that the amount reserved is smaller than 350 mCFG, we can be sure, that this
+    // Balance to be reserved on the delegatee account (anonymous proxy)
+    let delegateReserve: Balance;
+    // In the case that we see that the amount reserved is smaller than 20,041,000,000,000 xTEErs, we can be sure, that this
     // is an anonymous proxy. The reverse does not prove the non-existence of an anonymous proxy!
-    // Hence, we must ensure, that we subtract 350 mCFg from the deposit, as this one is reserved on the creator!
+    // Hence, we must ensure, that we subtract 20,041,000,000,000 xTEErs from the deposit, as this one is reserved on the creator!
     if (balance.reserved.toBigInt() < (BigInt(proxies.length) * perProxy.toBigInt()) + base.toBigInt()) {
-        let amount = deposit.toBigInt() - (perProxy.toBigInt() + base.toBigInt());
+        // Hoho, we're anonymous!
+        let minProxyCost = perProxy.toBigInt() + base.toBigInt();
+        let amount = deposit.toBigInt() - minProxyCost;
         reserve = toApi.createType("Balance", amount);
+        delegateReserve = toApi.createType("Balance", minProxyCost);
     } else if (CINCisDelegate) {
-        let amount = deposit.toBigInt() - (perProxy.toBigInt() + base.toBigInt());
+        let minProxyCost = perProxy.toBigInt() + base.toBigInt();
+        let amount = deposit.toBigInt() - minProxyCost;
         reserve = toApi.createType("Balance", amount);
+        delegateReserve = toApi.createType("Balance", minProxyCost);
     } else {
+        delegateReserve = toApi.createType("Balance", 0);;
         reserve = toApi.createType("Balance", deposit);
     }
-
-    return new StorageMapValue(newProxyInfo.toU8a(), completeKey, reserve);
+    console.log("newProxyInfo " + newProxyInfo);
+    console.log("reserve " + reserve);
+    return new StorageMapValue(newProxyInfo.toU8a(), completeKey, [reserve, delegateReserve]);
 }
 
 
