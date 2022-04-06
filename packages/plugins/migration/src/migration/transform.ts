@@ -98,7 +98,7 @@ async function transformProxy(
 
 async function transformProxyProxies(fromApi: ApiPromise, toApi: ApiPromise, completeKey: StorageKey, scaleOldProxies: Uint8Array): Promise<StorageItem> {
     // @ts-ignore, see https://github.com/polkadot-js/api/issues/3746
-    let oldProxyInfo = fromApi.createType('(Vec<(AccountId, ProxyType)>, Balance)', scaleOldProxies);
+    let oldProxyInfo = fromApi.createType('(Vec<(AccountId, ProxyType, BlockNumber)>, Balance)', scaleOldProxies);
 
     let proxies: Array<ProxyDefinition> = new Array();
 

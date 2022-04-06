@@ -251,7 +251,7 @@ async function verifyProxyProxies(
         process.stdout.write("    Verifying:    " + checked + "/ \r");
 
         // @ts-ignore
-        let oldProxyInfo = oldApi.createType('(Vec<(AccountId, ProxyType)>, Balance)', value);
+        let oldProxyInfo = oldApi.createType('(Vec<(AccountId, ProxyType, BlockNumber)>, Balance)', value);
 
         let newScale = newDataMap.get(key.toHex());
         if (newScale !== undefined) {
