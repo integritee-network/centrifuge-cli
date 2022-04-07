@@ -286,10 +286,6 @@ async function transformVestingVestingInfo(fromApi: ApiPromise, toApi: ApiPromis
         // This defines the remaining blocks one must wait until his
         // vesting is over.
         const remainingBlocks = (blockPeriodOldVesting - blocksPassedSinceVestingStart)
-        // Give the vesting time some head start, as atTo is the block right at migration start.
-        // 5 blocks = 1 minute
-        // 300 block = 1 hour
-        const headStartBlocks = BigInt(0);
 
         // We need to check if vesting is ongoing, is finished or has not yet started, as conversion will be different.
         if (blocksPassedSinceVestingStart > 0 && remainingBlocks > 0) {
@@ -308,20 +304,20 @@ async function transformVestingVestingInfo(fromApi: ApiPromise, toApi: ApiPromis
                 const info = toApi.createType("VestingInfo", [remainingLocked, newPerBlock, atTo]);
                 throw Error("Invalid vesting schedule. \nStorageKey: " + completeKey.toHex() + "\n VestingInfo: " + info.toHuman());
             }
-            newStartingBlock = atTo + headStartBlocks;
+            newStartingBlock = atTo;
 
         } else if (remainingBlocks <= 0) {
             // If vesting is finished -> use same start block and give everything at first block
             remainingLocked = old.locked.toBigInt();
             newPerBlock = old.locked.toBigInt();
-            newStartingBlock = atTo + headStartBlocks;
+            newStartingBlock = atTo;
 
         } else if (blocksPassedSinceVestingStart <= 0) {
             // If vesting has not started yes -> use starting block as (old - blocks_passed_on_old_mainnet),
             // as blocks_passed_on_old_mainnet is smaller than 0, resulting in an effective increase.
             remainingLocked = old.locked.toBigInt();
             newPerBlock = old.perBlock.toBigInt();
-            newStartingBlock = atTo - blocksPassedSinceVestingStart + headStartBlocks;
+            newStartingBlock = atTo - blocksPassedSinceVestingStart;
 
         } else {
             throw Error("Unreachable code... Came here with old vesting info of: " + old.toHuman());
