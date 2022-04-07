@@ -1,18 +1,18 @@
 // Here comes the oclif specific stuff
-import {flags} from '@oclif/command'
-import {ApiPromise, Keyring, SubmittableResult, WsProvider} from "@polkadot/api";
-import {Hash} from "@polkadot/types/interfaces";
+import { flags } from '@oclif/command'
+import { ApiPromise, Keyring, SubmittableResult, WsProvider } from "@polkadot/api";
+import { Hash } from "@polkadot/types/interfaces";
 import * as fs from 'fs';
-import {StorageItem} from "../migration/common";
-import {transform,} from "../migration/transform";
-import {ApiTypes, SubmittableExtrinsic} from "@polkadot/api/types";
-import {KeyringPair} from "@polkadot/keyring/types";
-import {StorageKey} from "@polkadot/types";
-import {fork} from "../migration/fork";
-import {IConfig} from "@oclif/config";
-import {cryptoWaitReady} from "@polkadot/util-crypto"
-import {CliBaseCommand} from "@centrifuge-cli/core";
-import {buildExtrinsics, migrate, verifyMigration} from "../migration/migrate";
+import { StorageItem } from "../migration/common";
+import { transform, } from "../migration/transform";
+import { ApiTypes, SubmittableExtrinsic } from "@polkadot/api/types";
+import { KeyringPair } from "@polkadot/keyring/types";
+import { StorageKey } from "@polkadot/types";
+import { fork } from "../migration/fork";
+import { IConfig } from "@oclif/config";
+import { cryptoWaitReady } from "@polkadot/util-crypto"
+import { CliBaseCommand } from "@centrifuge-cli/core";
+import { buildExtrinsics, migrate, verifyMigration } from "../migration/migrate";
 import {
     Credentials,
     Migrations,
@@ -35,7 +35,7 @@ export default class Migration extends CliBaseCommand {
 
     static examples = [
         `$ crowdloan --source-network wss://rpc.polkadot.io --destnation-network wss://portal.chain.centrifuge.io ` +
-        `--keyPair SOME_PATH_TO_JSON_OF_ACCOUNT --config SOME_PATH_TO_JSON_CONFIG` ,
+        `--keyPair SOME_PATH_TO_JSON_OF_ACCOUNT --config SOME_PATH_TO_JSON_CONFIG`,
     ]
 
     static args = [
@@ -65,7 +65,7 @@ export default class Migration extends CliBaseCommand {
             description: 'Path to a JSON-file that specifies the passwords and the path to the executor account.',
             required: true
         }),
-        'dry-run': flags.boolean( {
+        'dry-run': flags.boolean({
             description: 'This will fetch the storages, do the transformations but then stops before executing the extrinsics.',
         }),
         'verify': flags.boolean({
@@ -84,7 +84,7 @@ export default class Migration extends CliBaseCommand {
 
     async run() {
         try {
-            const {args, flags} = this.parse(Migration)
+            const { args, flags } = this.parse(Migration)
 
             // Parse Config
             await this.parseConfig(flags.config);
@@ -98,7 +98,7 @@ export default class Migration extends CliBaseCommand {
                 provider: wsProviderFrom,
                 types: {
                     ProxyType: {
-                        _enum: ['Any', 'NonTransfer', 'Governance', 'Staking', 'Vesting']
+                        _enum: ['Any', 'NonTransfer', 'Governance', 'CancelProxy']
                     }
                 }
             });
@@ -109,7 +109,7 @@ export default class Migration extends CliBaseCommand {
                 provider: wsProviderTo,
                 types: {
                     ProxyType: {
-                        _enum: ['Any', 'NonTransfer', 'Governance', '_Staking', 'NonProxy']
+                        _enum: ['Any', 'NonTransfer', 'Governance', 'CancelProxy']
                     }
                 }
             });
@@ -132,7 +132,7 @@ export default class Migration extends CliBaseCommand {
             }
 
             const atTo = (await this.toApi.rpc.chain.getHeader()).hash;
-            this.logger.info("Starting migration from parachain block with hash "  + atTo);
+            this.logger.info("Starting migration from parachain block with hash " + atTo);
             // This will be used later for the summary
             let endTo: Hash;
             // The source and destination storage elements.
@@ -140,10 +140,13 @@ export default class Migration extends CliBaseCommand {
 
             if (flags['just-verify'] === undefined) {
                 // A copy of the source storage state we are interested in
+                console.info("Fetching data from solochain..");
                 const sourceState = await fork(this.fromApi, storageToFetch, atFrom);
                 // Transform the source state to match the appropriate schema in the destination
+                console.info("Tranforming data..");
                 const transformedState: Map<string, Map<string, Array<StorageItem>>>
                     = await transform(sourceState, this.fromApi, this.toApi, startFrom, atFrom, atTo);
+                console.info("Generating extrinsics..");
                 const extrinsics = await buildExtrinsics(transformedState, this.fromApi, this.toApi);
 
                 // Execute migration
@@ -157,7 +160,7 @@ export default class Migration extends CliBaseCommand {
                             extrinsics,
                             destinationStorageElements,
                             this.toApi, this.keyPair,
-                        (failedExts) => { failed.push(...failedExts)}
+                            (failedExts) => { failed.push(...failedExts) }
                         );
 
                     if (failed.length != 0) {
@@ -206,7 +209,7 @@ export default class Migration extends CliBaseCommand {
                 let atToHash: Hash;
                 let endToHash: Hash;
 
-                if(flags['just-verify'] === undefined) {
+                if (flags['just-verify'] === undefined) {
                     startFromHash = startFrom;
                     atFromHash = atFrom;
                     atToHash = atTo;
@@ -234,22 +237,22 @@ export default class Migration extends CliBaseCommand {
                 const inconsistentStorage: Array<[StorageKey, number[] | Uint8Array]>
                     = await verifyMigration(
                         this.migrations,
-                    {
-                                api: this.fromApi,
-                                startBlock: startFromHash,
-                                endBlock: atFromHash,
-                            },
-                    {
-                        api: this.toApi,
-                        startBlock: atToHash,
-                        endBlock: endToHash,
-                    },
-                );
+                        {
+                            api: this.fromApi,
+                            startBlock: startFromHash,
+                            endBlock: atFromHash,
+                        },
+                        {
+                            api: this.toApi,
+                            startBlock: atToHash,
+                            endBlock: endToHash,
+                        },
+                    );
 
                 if (inconsistentStorage.length === 0) {
                     this.logger.info("✅️ Migration has been verified successfully");
                 } else {
-                    this.logger.info("❌ Migration failed for the following " + inconsistentStorage.length + "storage elements (source storage values):");
+                    this.logger.info("❌ Migration failed for the following " + inconsistentStorage.length + " storage elements (source storage values):");
                     let errMsg = inconsistentStorage.reduce((errMsg, [key, value]) => {
                         errMsg += "  Key: " + key + ", value: " + value + "\n";
                         return errMsg;
@@ -269,7 +272,7 @@ export default class Migration extends CliBaseCommand {
             try {
                 await this.fromApi.disconnect();
                 await this.toApi.disconnect()
-            } catch(err) {
+            } catch (err) {
                 this.exit(2);
             }
             this.exit(2);
@@ -288,7 +291,7 @@ export default class Migration extends CliBaseCommand {
         const subDir = "Summaries";
         const filename = "migration-" + Date.now() + ".json";
         const json = JSONbig.stringify(summary, null, 2);
-        this.logger.info("The following migration summary will be written to disk now: \n   "  + json);
+        this.logger.info("The following migration summary will be written to disk now: \n   " + json);
 
         try {
             this.writeFile(json, filename, subDir);
@@ -303,9 +306,9 @@ export default class Migration extends CliBaseCommand {
             let file = fs.readFileSync(filePath);
             const summary: MigrationSummary = JSONbig.parse(file.toString());
 
-             if (summary.toEndAt === undefined) {
-                 return Promise.reject("Missing 'toEndAt' in MigrationSummary")
-             }
+            if (summary.toEndAt === undefined) {
+                return Promise.reject("Missing 'toEndAt' in MigrationSummary")
+            }
 
             if (summary.fromFetchedAt === undefined) {
                 return Promise.reject("Missing 'fromFetchedAt' in MigrationSummary")
@@ -344,10 +347,10 @@ export default class Migration extends CliBaseCommand {
             if (credentials.rawSeed === undefined) {
                 return Promise.reject("Missing seed for executing account.");
             } else {
-                const keyring = new Keyring({type: 'sr25519'});
-                 if(!await cryptoWaitReady()) {
-                     return Promise.reject("Could not initilaize WASM environment for crypto. Aborting!");
-                 }
+                const keyring = new Keyring({ type: 'sr25519' });
+                if (!await cryptoWaitReady()) {
+                    return Promise.reject("Could not initilaize WASM environment for crypto. Aborting!");
+                }
                 this.keyPair = keyring.addFromUri(credentials.rawSeed);
             }
         } catch (err) {

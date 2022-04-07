@@ -29,3 +29,8 @@ Once the project has been built, you can choose to run it like so:
 ```bash
 node packages/cli/bin/run <subcommand>
 ```
+
+Example:
+```shell=
+./packages/cli/bin/run.js migration ws://127.0.0.1:9998 ws://127.0.0.1:9994 --config ./packages/plugins/migration/config/test-migration-config.json --creds ./packages/plugins/migration/config/alice-creds.json --verify
+```

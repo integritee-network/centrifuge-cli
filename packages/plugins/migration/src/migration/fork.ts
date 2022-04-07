@@ -1,15 +1,15 @@
-import {ApiPromise} from "@polkadot/api";
-import {StorageKey} from "@polkadot/types";
-import {Hash } from "@polkadot/types/interfaces";
-import { StorageElement} from "../migration/common";
-import {Migrations, toStorageElement} from "./interfaces";
+import { ApiPromise } from "@polkadot/api";
+import { StorageKey } from "@polkadot/types";
+import { Hash } from "@polkadot/types/interfaces";
+import { StorageElement } from "../migration/common";
+import { Migrations, toStorageElement } from "./interfaces";
 
 // ForkedData is a map of key (high-level storage key) to the content of said storage.
 // A high-level example would be: [Claims.ClaimedAmounts, [ [0x123, 42] ]
-type ForkedData = [string, Array<[ StorageKey, Uint8Array ]>];
+type ForkedData = [string, Array<[StorageKey, Uint8Array]>];
 
 // Zip the source and destination's state side-by-side for each migration item.
-// For example, we can request to have the `RadClaims.AccountBalances` state from
+// For example, we can request to have the `Claims.AccountBalances` state from
 // the standalone chain side-by-side the `Claims.ClaimedAmounts` from the parachain.
 export async function zippedFork(
     migrations: Migrations,
@@ -36,8 +36,8 @@ export async function zippedFork(
 }
 
 // Fork the `storageItems` from the given `api` at the given `block`
-export async function fork(api: ApiPromise, storageItems: Array<StorageElement>, block: Hash): Promise<Map<string, Array<[ StorageKey, Uint8Array ]>>>   {
-    let state: Map<string, Array<[ StorageKey, Uint8Array ]>> = new Map();
+export async function fork(api: ApiPromise, storageItems: Array<StorageElement>, block: Hash): Promise<Map<string, Array<[StorageKey, Uint8Array]>>> {
+    let state: Map<string, Array<[StorageKey, Uint8Array]>> = new Map();
 
     for (const element of storageItems) {
         let data = await fetchState(api, block, api.createType("StorageKey", element.key));
@@ -47,7 +47,7 @@ export async function fork(api: ApiPromise, storageItems: Array<StorageElement>,
     return state;
 }
 
-async function fetchState(api: ApiPromise, at: Hash, key: StorageKey): Promise<Array<[ StorageKey, Uint8Array ]>> {
+async function fetchState(api: ApiPromise, at: Hash, key: StorageKey): Promise<Array<[StorageKey, Uint8Array]>> {
     console.log("Fetching storage for prefix: " + key.toHuman());
 
     // The substrate api does provide the actual prefix, as the next_key, as we do here, when next key
@@ -92,7 +92,7 @@ async function fetchState(api: ApiPromise, at: Hash, key: StorageKey): Promise<A
 
     process.stdout.write("\n");
 
-    let pairs: Array<[StorageKey, Uint8Array ]> = [];
+    let pairs: Array<[StorageKey, Uint8Array]> = [];
 
     accumulate = 0;
     let promises = new Array();

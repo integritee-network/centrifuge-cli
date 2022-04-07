@@ -1,0 +1,22 @@
+[
+    {
+        "source": {
+            "pallet": "Claims",
+            "item": "Claims"
+        },
+        "destination": {
+            "pallet": "Claims",
+            "item": "Claims"
+        }
+    },
+    {
+        "source": {
+            "pallet": "Claims",
+            "item": "Total"
+        },
+        "destination": {
+            "pallet": "Claims",
+            "item": "Total"
+        }
+    }
+]

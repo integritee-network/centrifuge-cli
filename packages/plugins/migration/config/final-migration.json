@@ -1,0 +1,62 @@
+[
+    {
+        "source": {
+            "pallet": "System",
+            "item": "Account"
+        },
+        "destination": {
+            "pallet": "System",
+            "item": "Account"
+        }
+    },
+    {
+        "source": {
+            "pallet": "Balances",
+            "item": "TotalIssuance"
+        },
+        "destination": {
+            "pallet": "Balances",
+            "item": "TotalIssuance"
+        }
+    },
+    {
+        "source": {
+            "pallet": "Claims",
+            "item": "Total"
+        },
+        "destination": {
+            "pallet": "Claims",
+            "item": "Total"
+        }
+    },
+    {
+        "source": {
+            "pallet": "Claims",
+            "item": "Claims"
+        },
+        "destination": {
+            "pallet": "Claims",
+            "item": "Claims"
+        }
+    },
+    {
+        "source": {
+            "pallet": "Vesting",
+            "item": "Vesting"
+        },
+        "destination": {
+            "pallet": "Vesting",
+            "item": "Vesting"
+        }
+    },
+    {
+        "source": {
+            "pallet": "Proxy",
+            "item": "Proxies"
+        },
+        "destination": {
+            "pallet": "Proxy",
+            "item": "Proxies"
+        }
+    }
+]
